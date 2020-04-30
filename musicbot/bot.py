@@ -1435,7 +1435,7 @@ class MusicBot(discord.Client):
                         raise exceptions.CommandError(
                             "Error downloading the track, please try again.")
                     else:
-                        raise exceptions.CommandError(e, expire_in=60)
+                        raise exceptions.CommandError(e, expire_in=30)
 
             if not info:
                 raise exceptions.CommandError(
@@ -1468,7 +1468,7 @@ class MusicBot(discord.Client):
                         raise exceptions.CommandError(
                             "Error downloading the track, please try again.")
                     else:
-                        raise exceptions.CommandError(e, expire_in=60)  
+                        raise exceptions.CommandError(e, expire_in=30)  
 
                 if not info:
                     raise exceptions.CommandError(
