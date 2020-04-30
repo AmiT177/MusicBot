@@ -123,6 +123,13 @@ class MusicBot(discord.Client):
                 log.warning('There was a problem initialising the connection to Spotify. Is your client ID and secret correct? Details: {0}. Continuing anyway in 5 seconds...'.format(e))
                 self.config._spotify = False
                 time.sleep(5)  # make sure they see the problem
+        self.IP_LIST = ['1.1.1.1', '1.1.1.2']
+        if self.IP_LIST[0] == "1.1.1.1":
+            log.error("IP_LIST must be changed, existing")
+            time.sleep(5)
+            raise exceptions.TerminateSignal()
+
+
 
     # TODO: Add some sort of `denied` argument for a message to send when someone else tries to use it
     def owner_only(func):
@@ -1421,10 +1428,14 @@ class MusicBot(discord.Client):
 
                 except Exception as e:
                     if 'unknown url type' in str(e):
-                        song_url = song_url.replace(':', '')  # it's probably not actually an extractor
+                        song_url = song_url.replace(':', '') # it's probably not actually an extractor
                         info = await self.downloader.extract_info(player.playlist.loop, song_url, download=False, process=False)
+                    elif "HTTPError 429" in e.__str__():
+                        self.downloader.set_ip(random.choice(self.IP_LIST))
+                        raise exceptions.CommandError(
+                            "Error downloading the track, please try again.")
                     else:
-                        raise exceptions.CommandError(e, expire_in=30)
+                        raise exceptions.CommandError(e, expire_in=60)
 
             if not info:
                 raise exceptions.CommandError(
@@ -1441,15 +1452,23 @@ class MusicBot(discord.Client):
             # our ytdl options allow us to use search strings as input urls
             if info.get('url', '').startswith('ytsearch'):
                 # print("[Command:play] Searching for \"%s\"" % song_url)
-                info = await self.downloader.extract_info(
-                    player.playlist.loop,
-                    song_url,
-                    download=False,
-                    process=True,    # ASYNC LAMBDAS WHEN
-                    on_error=lambda e: asyncio.ensure_future(
-                        self.safe_send_message(channel, "```\n%s\n```" % e, expire_in=120), loop=self.loop),
-                    retry_on_error=True
-                )
+                try:
+                    info = await self.downloader.extract_info(
+                        player.playlist.loop,
+                        song_url,
+                        download=False,
+                        process=True,    # ASYNC LAMBDAS WHEN
+                        on_error=lambda e: asyncio.ensure_future(
+                            self.safe_send_message(channel, "```\n%s\n```" % e, expire_in=120), loop=self.loop),
+                        retry_on_error=True
+                    )
+                except Exception as e:
+                    if "HTTPError 429" in e.__str__():
+                        self.downloader.set_ip(random.choice(self.IP_LIST))
+                        raise exceptions.CommandError(
+                            "Error downloading the track, please try again.")
+                    else:
+                        raise exceptions.CommandError(e, expire_in=60)  
 
                 if not info:
                     raise exceptions.CommandError(
